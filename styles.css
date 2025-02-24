@@ -157,3 +157,11 @@ button:hover {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
 }
+
+.single-player .multi-player {
+    display: none !important;
+}
+
+#lobby .section h2 {
+    margin-bottom: 1rem;
+}

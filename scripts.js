@@ -76,7 +76,7 @@ async function updateGameState() {
         
         const statusElement = document.getElementById('game-status');
         if (gameData.status === 'finished') {
-            statusElement.innerHTML = `Winner: ${gameData.winner} 🎉<br><button onclick="resetGame()">بازی جدید</button>`;
+            statusElement.innerHTML = `Winner: ${gameData.winner} 🎉<br><button onclick="resetGame()">New game</button>`;
         } else if (gameData.status === 'waiting') {
             statusElement.textContent = 'Waiting for the second player....';
         } else {
@@ -142,6 +142,11 @@ function renderGameBoard(gameData) {
 }
 
 async function handleCellClick(event) {
+    if (document.body.classList.contains('single-player')) {
+        const gameData = await apiRequest('status', {roomId: currentRoomId});
+        playerSymbol = gameData.currentPlayer;
+    }
+    
     if (!playerSymbol) return;
     
     const boardIndex = parseInt(event.target.dataset.board);
@@ -157,6 +162,7 @@ async function handleCellClick(event) {
         await updateGameState();
     } catch (error) {
         console.error('Move error:', error);
+        alert(error.message);
     }
 }
 
@@ -204,4 +210,96 @@ function checkSmallBoardWinner(board) {
 
 function isBoardFull(board) {
     return board.every(cell => cell !== null);
+}
+
+function startSingleDeviceGame() {
+    apiRequest('create_single')
+        .then(({roomId}) => {
+            currentRoomId = roomId;
+            playerSymbol = null;
+            document.body.classList.add('single-player');
+            showGameInterface();
+            startSingleDevicePolling();
+            document.getElementById('room-code').textContent = 'Local Game';
+        });
+}
+
+function startSingleDevicePolling() {
+    setInterval(() => {
+        if (currentRoomId) updateGameState();
+    }, 500);
+}
+
+function renderGameBoard(gameData) {
+    const ultimateBoard = document.getElementById('ultimate-board');
+    ultimateBoard.innerHTML = '';
+    
+    for (let boardIndex = 0; boardIndex < 9; boardIndex++) {
+        const board = document.createElement('div');
+        board.className = 'board';
+        
+        const isActive = gameData.nextBoardIndex === null || gameData.nextBoardIndex === boardIndex;
+        const isPlayable = isBoardPlayable(gameData.boards[boardIndex]);
+        const winner = gameData.boardWinners[boardIndex];
+        
+        if (winner) {
+            board.classList.add('board-winner');
+            board.style.backgroundColor = winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+            
+            const winnerSymbol = document.createElement('div');
+            winnerSymbol.className = 'board-winner-symbol';
+            winnerSymbol.textContent = winner;
+            winnerSymbol.style.color = winner === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+            board.appendChild(winnerSymbol);
+        }
+
+        if (!winner) {
+            for (let cellIndex = 0; cellIndex < 9; cellIndex++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.board = boardIndex;
+                cell.dataset.cell = cellIndex;
+                
+                const symbol = gameData.boards[boardIndex][cellIndex];
+                if (symbol) {
+                    cell.textContent = symbol;
+                    cell.style.color = symbol === 'X' ? 'var(--x-color)' : 'var(--o-color)';
+                }
+                
+                if (document.body.classList.contains('single-player')) {
+                    if (gameData.currentPlayer && isActive && isPlayable) {
+                        cell.addEventListener('click', handleCellClick);
+                    } else {
+                        cell.style.opacity = '0.5';
+                        cell.style.cursor = 'not-allowed';
+                    }
+                } else {
+                    if (!isActive || !isPlayable || winner) {
+                        cell.style.opacity = '0.5';
+                        cell.style.cursor = 'not-allowed';
+                        cell.onclick = null;
+                    } else {
+                        cell.addEventListener('click', handleCellClick);
+                    }
+                }
+                
+                board.appendChild(cell);
+            }
+        } else {
+            board.style.pointerEvents = 'none';
+        }
+        
+        ultimateBoard.appendChild(board);
+    }
+}
+if (document.body.classList.contains('single-player')) {
+    if (isActive && isPlayable && !winner) {
+        cell.addEventListener('click', handleCellClick);
+        cell.style.opacity = '1';
+        cell.style.cursor = 'pointer';
+    } else {
+        cell.style.opacity = '0.5';
+        cell.style.cursor = 'not-allowed';
+        cell.onclick = null;
+    }
 }

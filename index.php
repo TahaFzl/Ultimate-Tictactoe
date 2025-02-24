@@ -22,6 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'reset':
                 echo resetGame($data);
                 break;
+            case 'create_single':
+                echo createSingleDeviceRoom();
+                break;
             default:
                 http_response_code(400);
                 echo json_encode(['error' => 'Invalid action']);
@@ -50,16 +53,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div id="lobby">
             <div class="section">
+                <h2>Single Device 🎮</h2>
+                <button onclick="startSingleDeviceGame()">Play on One Device</button>
+            </div>
+            
+            <div class="section">
                 <h2>Make New Room 🏠</h2>
                 <button onclick="createRoom()">Make new room</button>
-                <input type="text" id="create-name" placeholder="Your name">
+                <input type="text" id="create-name" placeholder="Your name" class="multi-player">
             </div>
             
             <div class="section">
                 <h2>Join Room 🚪</h2>
                 <button onclick="joinRoom()">Join Room</button>
-                <input type="text" id="join-name" placeholder="Your Name">
-                <input type="text" id="room-id" placeholder="Rooms Code">
+                <input type="text" id="join-name" placeholder="Your Name" class="multi-player">
+                <input type="text" id="room-id" placeholder="Rooms Code" class="multi-player">
             </div>
         </div>
 
@@ -78,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div id="ultimate-board"></div>
             
-            <div id="room-info">
+            <div id="room-info" class="multi-player">
                 <button onclick="copyRoomCode()">Copy Code 📋</button>
                 <span>Room Code: <strong id="room-code"></strong></span>
             </div>
@@ -90,6 +98,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </html>
 
 <?php
+function createSingleDeviceRoom() {
+    $roomId = uniqid();
+    $gameData = [
+        'players' => [
+            'X' => 'Player 1',
+            'O' => 'Player 2'
+        ],
+        'boards' => array_fill(0, 9, array_fill(0, 9, null)),
+        'boardWinners' => array_fill(0, 9, null),
+        'currentPlayer' => 'X',
+        'status' => 'playing',
+        'lastUpdate' => time(),
+        'nextBoardIndex' => null,
+        'winner' => null
+    ];
+    
+    saveGameData($roomId, $gameData);
+    return json_encode(['roomId' => $roomId]);
+}
+
 function createRoom($data) {
     $roomId = uniqid();
     $gameData = [
